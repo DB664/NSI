@@ -6,12 +6,12 @@ img = Image.open(nom_img).convert("RGB")
 largeur, hauteur = img.size
 
 def taille_du_message():
-    # Récupère les LSB des R,G,B des 5 premiers pixels de la colonne 0
+    # Récupère les LSB des R,V,B des 5 premiers pixels de la colonne 0
     bits = []
     for i in range(5):
-        r, g, b = img.getpixel((0, i))
-        for v in (r, g, b):
-            bits.append(v & 1)
+        r, v, b = img.getpixel((0, i))
+        for y in (r, v, b):
+            bits.append(y & 1)
     bin_length = "".join(map(str, bits))
     return int(bin_length, 2)
 
