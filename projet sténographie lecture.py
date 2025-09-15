@@ -1,64 +1,51 @@
-import PIL.Image
+from PIL import Image
 
-# ouverture du fichier :
-img = PIL.Image.open('james_bond.png')
-
-# lecture dans le fichier de la taille de l'image
+# Ouverture du fichier image
+img = Image.open('james_bond_test.png').convert("RGB")
 largeur, hauteur = img.size
 
 def taille_du_message():
-    # Lecture et recuperation des R,V,B des 5 premiers pixels
-    taille = []
+    # Récupère les LSB des R,G,B des 5 premiers pixels de la colonne 0
+    bits = []
     for i in range(5):
-        r, v, b = img.getpixel((0, i))
-        taille += [r, v, b]
+        r, g, b = img.getpixel((0, i))
+        for v in (r, g, b):
+            bits.append(v & 1)
+    bin_length = "".join(map(str, bits))
+    return int(bin_length, 2)
 
-    # passage R,V,B vers binaire et lecture bit caché
-    bin_length = ""
-    for i in range(len(taille)):
-        x = bin(taille[i])
-        bin_length += str(x[-1])
-    
-    length = int(bin_length, 2)
-    return length
-
-def lecture_des_RVB_du_message():
-    ## Lecture et recuperation des R,V,B des pixels contenant le message
+def lecture_des_bits_du_message():
     msg_length = taille_du_message()
-    total_pixels = []
-    for h in range(hauteur):
-        row = []
-        for l in range(largeur):
-            r, v, b = img.getpixel((l, h))
-            row.append([r, v, b])
-        total_pixels.append(row)
-
-    # Enlever les 5 premiers pixels utilisés pour la taille
-    for i in range(5):
-        total_pixels[0].pop(0)
-
-    return total_pixels, msg_length
-
-def extraction_texte_depuis_bits_failbles(total_pixels, msg_length):
-    bin_trad = ""
+    bits = []
     count = 0
-    # On parcourt la liste de pixels, on extrait le LSB de R, V, B (sauf les 5 premiers)
-    for row in total_pixels:
-        for pixel in row:
-            for couleur in pixel:
-                bin_trad += str(couleur & 1)
-                count += 1
-                if count >= msg_length * 8:
+    for y in range(hauteur):
+        for x in range(largeur):
+            # Ignore les 5 premiers pixels de la colonne 0
+            if x == 0 and y < 5:
+                continue
+            r, g, b = img.getpixel((x, y))
+            for v in (r, g, b):
+                if count < msg_length * 8:
+                    bits.append(v & 1)
+                    count += 1
+                else:
                     break
             if count >= msg_length * 8:
                 break
         if count >= msg_length * 8:
             break
+    return bits, msg_length
 
-    # Découpe en octets de 8 bits
-    octets = [bin_trad[i:i+8] for i in range(0, len(bin_trad), 8)]
-    texte = "".join([chr(int(octet, 2)) for octet in octets if len(octet) == 8])
-    print("Le message est :", texte)
+def extraction_texte_utf8(bits, msg_length):
+    # Regroupe les bits en octets
+    octets = [bits[i:i+8] for i in range(0, len(bits), 8)]
+    byte_values = [int("".join(map(str, octet)), 2) for octet in octets if len(octet) == 8]
+    try:
+        message = bytes(byte_values).decode('utf-8')
+        print("Le message est :", message)
+    except UnicodeDecodeError as e:
+        print("Erreur de décodage UTF-8 :", e)
+        print("Octets extraits :", byte_values)
 
-total_pixels, msg_length = lecture_des_RVB_du_message()
-extraction_texte_depuis_bits_failbles(total_pixels, msg_length)
+bits, msg_length = lecture_des_bits_du_message()
+extraction_texte_utf8(bits, msg_length)
