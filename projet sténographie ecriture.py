@@ -1,20 +1,23 @@
 from PIL import Image
 
 # Ouvre l'image existante
-nom_img=input("nom de l'immage(.png): ")
+nom_img = input("nom de l'image (.png): ")
 img = Image.open(nom_img).convert("RGB")
 
-# Parameters
-width, height = 20, 10
-img = Image.new("RGB", (width, height), "white")
+# Récupère la taille de l'image existante
+width, height = img.size
 
-# Message to hide
-message = input('message caché :  ')
-msg_bytes = message.encode('utf-8')  # ENCODAGE UTF-8 ICI !
+# Message à cacher
+message = input('message caché : ')
+msg_bytes = message.encode('utf-8')  # ENCODAGE UTF-8
 msg_length = len(msg_bytes)
 
-# --- 1. Encode message length in first 5 pixels' LSBs (15 bits) ---
-bin_length = bin(msg_length)[2:].zfill(15)  # 15-bit binary string
+if width * height * 3 < 15 + msg_length * 8:
+    print("Image trop petite pour cacher ce message !")
+    exit()
+
+# --- 1. Encode la taille du message dans les 5 premiers pixels de la colonne 0 ---
+bin_length = bin(msg_length)[2:].zfill(15)  # 15 bits pour la taille
 
 for i in range(5):
     r, g, b = img.getpixel((0, i))
@@ -30,12 +33,12 @@ for i in range(5):
                 b = (b & ~1) | bit
     img.putpixel((0, i), (r, g, b))
 
-# --- 2. Encode the message (UTF-8 bytes) into LSBs of subsequent pixels ---
-bits = "".join([bin(byte)[2:].zfill(8) for byte in msg_bytes])  # Message as bit string
+# --- 2. Encode le message (UTF-8 bytes) dans les LSBs des pixels suivants ---
+bits = "".join([bin(byte)[2:].zfill(8) for byte in msg_bytes])
 bit_idx = 0
 for y in range(height):
     for x in range(width):
-        # Skip first 5 pixels in column 0
+        # Saute les 5 premiers pixels de la colonne 0
         if x == 0 and y < 5:
             continue
         r, g, b = img.getpixel((x, y))
@@ -50,7 +53,11 @@ for y in range(height):
                     b = (b & ~1) | bit
                 bit_idx += 1
         img.putpixel((x, y), (r, g, b))
+        if bit_idx >= len(bits):
+            break
+    if bit_idx >= len(bits):
+        break
 
-# Save the image
+# Sauvegarde l'image modifiée sous le même nom
 img.save(nom_img)
-print("Image créée : ",nom_img)
+print("Message caché dans l'image :", nom_img)
