@@ -1,7 +1,8 @@
 from PIL import Image
 
 # Ouverture du fichier image
-img = Image.open('james_bond_test.png').convert("RGB")
+nom_img=input("nom de l'immage(.png): ")
+img = Image.open(nom_img).convert("RGB")
 largeur, hauteur = img.size
 
 def taille_du_message():
